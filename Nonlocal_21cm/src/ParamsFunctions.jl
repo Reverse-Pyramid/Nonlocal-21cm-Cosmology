@@ -1,5 +1,8 @@
 module ParamsFunctions
 
+using DifferentialEquations
+using Plots
+using DataFrames
 #---------------------parameters---------------------
 
 #General Params
@@ -66,11 +69,17 @@ H_nl(z) = 1 / (1 + z) * H_nonlocal(z)
 
 H_nonlocal_prime_z(z) = H_nonlocal(z) * ((OmegaBh2 / h^2 / (1 + S(0)) * (3 * (1 + wB)) * (1 + z) ^ (3 * (1 + wB) - 1) + OmegaCh2 / h^2 / (1 + S(0)) * (3 * (1 + wC)) * (1 + z) ^(3 * (1 + wC) - 1) + (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) * (3 * (1 + wlambda)) * (1 + z) ^ (3 * (1 + wlambda) - 1)) / 2 / (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z) ^ (3 * (1 + wB)) + OmegaCh2 / h^2 / (1 + S(0)) * (1 + z) ^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) * (1 + z) ^ (3 * (1 + wlambda))) + Gamma_prime_z(z) / Gamma(z))
 
+H_nl_prime(z) = H_nl(z)^2 - H_nonlocal(z) * H_nonlocal_prime_z(z) / (1 + z)
+
 S(z) = alpha_s * (1 + z) ^ beta_s
 
 Sprime_z(z) = alpha_s * beta_s * (1 + z) ^ (beta_s - 1)
 
 Ssecond_z(z) = alpha_s * beta_s * (beta_s - 1) * (1 + z) ^ (beta_s - 2)
+
+Sprime(z) = -H_nonlocal(z) * Sprime_z(z)
+
+Ssecond(z) = H_nonlocal(z) * H_nonlocal_prime_z(z) * Sprime_z(z) + H_nonlocal(z)^2 * Ssecond_z(z)
 
 beta(z) = - H_nonlocal(z) * Sprime_z(z) / (1 + S(z))
 
@@ -78,14 +87,71 @@ betaprime(z) = H_nonlocal_prime_z(z) * H_nonlocal(z) * Sprime_z(z) / (1 + S(z)) 
 
 gothic_R(z, k) = 2 * k^2 - 3 * beta(z) * H_nl(z)
 
-A1(z, k) = - (18 * (1 + w) * H_nl(z)^3 + 4 * k^2 * beta(z) + 3 * H_nl(z)^2 * (7 - 3 * w - 6 * dP_dRho) * beta(z) + 12 * k^2 * H_nl(z) * (w - dP_dRho) - 6 * H_nl(z) * betaprime(z)) / (2 * (1 + S(z)) * gothic_R(z, k))
+Omega_tilde_nl(z) = (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z) ^ (3 * (1 + wB)) + OmegaCh2 / h^2 / (1 + S(0)) * (1 + z) ^(3 * (1 + wC))) / (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z) ^ (3 * (1 + wB)) + OmegaCh2 / h^2 / (1 + S(0)) * (1 + z) ^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) * (1 + z) ^ (3 * (1 + wlambda)))
 
-A2(z, k) = -1 / (1 + z) * (-4 * k^4 + 54 * (1 + w) * H_nl(z)^4 + 12 * H_nl(z) * beta(z) * (2 * k^2 + 3 * H_nl(z)^2) + 9 * H_nl(z)^2 * (2 * k^2 * (1 + w) - beta(z)^2 - 2 * betaprime(z))) / (2 * k^2 * (1 + S(z)) * gothic_R(z, k) * (1 + 2)^(-1))
+Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) / ((OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0)))) * (-3) / (1 + z)^4
 
-B1(z, k) = - (2 + 3 * w) * H_nl(z) - beta(z) + (3 * H_nl(z) * (2 * k^2 + 3 * (1 + w) * H_nl(z)^2)) / gothic_R(z, k)
+function initial_conditions_phi(D_100, D_prime_100, k)
+    A1(k) = 2 * H_nl(100) + 0.5 * beta(100) + 2 * Sprime(100) / (1 + S(100)) - k^2 / 3 / H_nl(100)
+    A2(k) = -2 * beta(100)^2 + 2 * Ssecond(100) / (1 + S(100)) - 2 * Sprime(100) / (1 + S(100)) * H_nl_prime(100) / H_nl(100) + k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - 0.5 * betaprime(100)
+    B1() = -0.5 * (H_nl_prime(100) * Omega_tilde_nl(100) + H_nl(100) * Omega_tilde_nl_prime(100))
+    B2() = -0.5 * H_nl(100) * Omega_tilde_nl(100)
+    C2(k) = k^2 / 3 / H_nl(100) + H_nl(100) + 0.5 * beta(100)
+    D1() = 0.5 * H_nl(100) * Omega_tilde_nl(100)
+    phi_100 = 1 / (A2(k) / A1(k) - C2(k)) * ((B1() / A1(k) - D1()) * D_100 + B2() / A1(k) * D_prime_100)
+    phi_prime_100 = D1() * D_100 - C2(k) * phi_100
+    return phi_100, phi_prime_100
+end
 
-B2(z, k) = k^2 * (-2 * k^2 * dP_dRho + 3 * (1 + w) * H_nl(z)^2 + 3 * (1 + dP_dRho) * beta(z) * H_nl(z)) / ((1 + w) * gothic_R(z, k))
+function phi_solve(k)
+    phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
+    M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
+    M2(z) = - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
+    u0 = [phi_100, phi_prime_100]
+    zspan = (100.0, 0.0)
+    function phi_ODE!(du, u, p, t)
+        phi, phi_dot = u
+        du[2] = dphi_doubledot = -(H_nonlocal_prime_z(t) - M1(t)) / H_nonlocal(t) * phi_dot - M2(t) / H_nonlocal(t)^2 * phi
+        du[1] = dphi = phi_dot
+    end
+    prob = ODEProblem(phi_ODE!, u0, zspan)
+    sol = solve(prob)
+    return sol
+end
 
+function plot_phi(k)
+    sol = phi_solve(k)
+    plot(sol, layout = (2,1), xaxis = "z", label = ["ϕ, k = $k" "dϕ/dz, k = $k"])
+end
 
+function plot_phi!(k)
+    sol = phi_solve(k)
+    plot!(sol, layout = (2,1), xaxis = "z", label = ["ϕ, k = $k" "dϕ/dz, k = $k"])
+end
+
+function d_solve(k)
+    sol = phi_solve(k)
+    df = DataFrame(sol)
+    z = df[!, 1]
+    phi = df[!, 2]
+    phi_dot = df[!, 3]
+    d_sol = Float64[]
+    num = length(z)
+    for i in 1:num
+        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i]) + 0.5 * beta(z[i])) * phi[i])
+        push!(d_sol, d)
+    end
+    return z, d_sol
+end
+
+function plot_d(k)
+    z_arr, d_arr = d_solve(k)
+    plot(z_arr, d_arr, xaxis = "z", yaxis = "D", label = "k = $k")
+end
+
+function plot_d!(k)
+    z_arr, d_arr = d_solve(k)
+    plot!(z_arr, d_arr, xaxis = "z", yaxis = "D", label = "k = $k")
+end
 
 end

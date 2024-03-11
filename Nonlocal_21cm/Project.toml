@@ -1,6 +1,6 @@
 name = "Nonlocal_21cm"
 uuid = "a35b9699-349d-4444-afc0-51c4c54f8a1e"
-authors = ["MohGhoraishi <mohammadg2002@outlook.com>"]
+authors = ["MohGhoraishi <mohammadg2002@outlook.com>", "Aria-Hem <ariahemmatian81@gmail.com>"]
 version = "0.1.0"
 
 [deps]

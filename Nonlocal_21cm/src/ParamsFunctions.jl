@@ -3,6 +3,10 @@ module ParamsFunctions
 using DifferentialEquations
 using Plots
 using DataFrames
+#---------------------Config-------------------------
+
+save_step_length = 0.1
+
 #---------------------parameters---------------------
 
 #General Params
@@ -92,6 +96,10 @@ Omega_tilde_nl(z) = (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z)^(3 * (1 + wB)) + Omeg
 
 Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) / ((OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0)))) * (-3) / (1 + z)^4
 
+q(k) = k / 13.41 / keq
+C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
+T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
+
 function initial_conditions_phi(D_100, D_prime_100, k)
     A1(k) = 2 * H_nl(100) + 0.5 * beta(100) + 2 * Sprime(100) / (1 + S(100)) - k^2 / 3 / H_nl(100)
     A2(k) = -2 * beta(100)^2 + 2 * Ssecond(100) / (1 + S(100)) - 2 * Sprime(100) / (1 + S(100)) * H_nl_prime(100) / H_nl(100) + k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - 0.5 * betaprime(100) + 3 * (1 - Omega_tilde_nl(100)) * H_nl(100) * (H_nl(100) + beta(100))
@@ -116,18 +124,34 @@ function phi_solve(k)
         du[1] = dphi = phi_dot
     end
     prob = ODEProblem(phi_ODE!, u0, zspan)
-    sol = solve(prob)
+    sol = solve(prob, saveat = save_step_length)
+    return sol
+end
+
+function phi_solve(k, z_target)
+    phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
+    M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
+    M2(z) = 3 * (1 - Omega_tilde_nl(z)) * H_nl(z) * (H_nl(z) + beta(z)) - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
+    u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
+    zspan = (100.0, z_target)
+    function phi_ODE!(du, u, p, t)
+        phi, phi_dot = u
+        du[2] = dphi_doubledot = -(H_nonlocal_prime_z(t) - M1(t)) / H_nonlocal(t) * phi_dot - M2(t) / H_nonlocal(t)^2 * phi
+        du[1] = dphi = phi_dot
+    end
+    prob = ODEProblem(phi_ODE!, u0, zspan)
+    sol = solve(prob, saveat = save_step_length)
     return sol
 end
 
 function plot_phi(k)
     sol = phi_solve(k)
-    plot(sol, layout=(2, 1), xaxis="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
+    plot(sol, layout=(2, 1),title = ["ϕ(z)" "dϕ/dz(z)"], xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
 function plot_phi!(k)
     sol = phi_solve(k)
-    plot!(sol, layout=(2, 1), xaxis="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
+    plot!(sol, layout=(2, 1), xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
 function d_solve(k)
@@ -145,14 +169,52 @@ function d_solve(k)
     return z, d_sol
 end
 
+function d_solve(k, z_target)
+    sol = phi_solve(k, z_target)
+    df = DataFrame(sol)
+    z = df[!, 1]
+    phi = df[!, 2]
+    phi_dot = df[!, 3]
+    d_sol = Float64[]
+    num = length(z)
+    for i in 1:num
+        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i]) + 0.5 * beta(z[i])) * phi[i])
+        push!(d_sol, d)
+    end
+    return z, d_sol
+end
+
 function plot_d(k)
     z_arr, d_arr = d_solve(k)
-    plot(z_arr, d_arr, xaxis="z", yaxis="D", label="k = $k")
+    plot(z_arr, d_arr, title = "D(z)",xlabel="z", ylabel="D", label="k = $k")
 end
 
 function plot_d!(k)
     z_arr, d_arr = d_solve(k)
-    plot!(z_arr, d_arr, xaxis="z", yaxis="D", label="k = $k")
+    plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k")
 end
 
+function power_spectrum_solve(k_order_min, k_order_max, z)
+    data_count = 40
+    k_range = 10 .^ range(k_order_min, stop = k_order_max, length=data_count)
+    k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
+    ps_arr = Float64[]
+    for k in k_range
+        z_arr, d_arr = d_solve(k, z)
+        ps = T0(k)^2 * d_arr[end]
+        push!(ps_arr, ps)
+    end
+    ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
+    return k_range, ps_arr
+end
+
+function power_spectrum_plot(k_order_min, k_order_max, z)
+    k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
+    plot(k_arr, ps_arr, title = "Nonlocal Power Spectrum", xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+end
+
+function power_spectrum_plot!(k_order_min, k_order_max, z)
+    k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
+    plot!(k_arr, ps_arr, xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+end
 end

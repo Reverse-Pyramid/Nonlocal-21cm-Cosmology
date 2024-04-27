@@ -79,11 +79,11 @@ C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
 T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
 
 function initial_conditions_phi(D_100, D_prime_100, k)
-    A1(k) = 2 * H_nl(100) + 0.5 * beta(100) + 2 * Sprime(100) / (1 + S(100)) - k^2 / 3 / H_nl(100)
-    A2(k) = -2 * beta(100)^2 + 2 * Ssecond(100) / (1 + S(100)) - 2 * Sprime(100) / (1 + S(100)) * H_nl_prime(100) / H_nl(100) + k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - 0.5 * betaprime(100) + 3 * (1 - Omega_tilde_nl(100)) * H_nl(100) * (H_nl(100) + beta(100))
-    B1() = -0.5 * (H_nl_prime(100) * Omega_tilde_nl(100) + H_nl(100) * Omega_tilde_nl_prime(100))
-    B2() = -0.5 * H_nl(100) * Omega_tilde_nl(100)
-    C2(k) = k^2 / 3 / H_nl(100) + H_nl(100) + 0.5 * beta(100)
+    A1(k) = - 2 * H_nl(100) + k^2 / 3 / H_nl(100)
+    A2(k) = - k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - H_nl(100)^2
+    B1() = 0.5 * (H_nl_prime(100) * Omega_tilde_nl(100) + H_nl(100) * Omega_tilde_nl_prime(100))
+    B2() = 0.5 * H_nl(100) * Omega_tilde_nl(100)
+    C2(k) = k^2 / 3 / H_nl(100) + H_nl(100)
     D1() = 0.5 * H_nl(100) * Omega_tilde_nl(100)
     phi_100 = 1 / (A2(k) / A1(k) - C2(k)) * ((B1() / A1(k) - D1()) * D_100 + B2() / A1(k) * D_prime_100)
     phi_prime_100 = D1() * D_100 - C2(k) * phi_100
@@ -92,8 +92,8 @@ end
 
 function phi_solve(k)
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
-    M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
-    M2(z) = 3 * (1 - Omega_tilde_nl(z)) * H_nl(z) * (H_nl(z) + beta(z)) - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
+    M1(z) = 3 * H_nl(z) 
+    M2(z) = H_nl(z)^2 + 2*H_nl_prime(z) 
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
     zspan = (100.0, 0.0)
     function phi_ODE!(du, u, p, t)
@@ -108,8 +108,8 @@ end
 
 function phi_solve(k, z_target)
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
-    M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
-    M2(z) = 3 * (1 - Omega_tilde_nl(z)) * H_nl(z) * (H_nl(z) + beta(z)) - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
+    M1(z) = 3 * H_nl(z) 
+    M2(z) = H_nl(z)^2 + 2*H_nl_prime(z) 
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
     zspan = (100.0, z_target)
     function phi_ODE!(du, u, p, t)

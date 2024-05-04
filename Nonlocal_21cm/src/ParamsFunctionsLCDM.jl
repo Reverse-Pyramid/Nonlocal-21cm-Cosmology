@@ -66,21 +66,21 @@ H_nonlocal(z) = H0 * sqrt(OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h
 
 H_nl(z) = 1 / (1 + z) * H_nonlocal(z)
 
-H_nonlocal_prime_z(z) = H_nonlocal(z) * ((OmegaBh2 / h^2  * (3 * (1 + wB)) * (1 + z)^(3 * (1 + wB) - 1) + OmegaCh2 / h^2  * (3 * (1 + wC)) * (1 + z)^(3 * (1 + wC) - 1) + (1 - (OmegaBh2 + OmegaCh2) / h^2 ) * (3 * (1 + wlambda)) * (1 + z)^(3 * (1 + wlambda) - 1)) / 2 / (OmegaBh2 / h^2  * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2 * (1 + z)^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2) * (1 + z)^(3 * (1 + wlambda))))
+H_nonlocal_prime_z(z) = H_nonlocal(z) * ((OmegaBh2 / h^2 * (3 * (1 + wB)) * (1 + z)^(3 * (1 + wB) - 1) + OmegaCh2 / h^2 * (3 * (1 + wC)) * (1 + z)^(3 * (1 + wC) - 1) + (1 - (OmegaBh2 + OmegaCh2) / h^2) * (3 * (1 + wlambda)) * (1 + z)^(3 * (1 + wlambda) - 1)) / 2 / (OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2 * (1 + z)^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2) * (1 + z)^(3 * (1 + wlambda))))
 
 H_nl_prime(z) = H_nl(z)^2 - H_nonlocal(z) * H_nonlocal_prime_z(z) / (1 + z)
 
-Omega_tilde_nl(z) = (OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2  * (1 + z)^(3 * (1 + wC))) / (OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2 * (1 + z)^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2) * (1 + z)^(3 * (1 + wlambda)))
+Omega_tilde_nl(z) = (OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2 * (1 + z)^(3 * (1 + wC))) / (OmegaBh2 / h^2 * (1 + z)^(3 * (1 + wB)) + OmegaCh2 / h^2 * (1 + z)^(3 * (1 + wC)) + (1 - (OmegaBh2 + OmegaCh2) / h^2) * (1 + z)^(3 * (1 + wlambda)))
 
-Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2 ) / ((OmegaBh2 + OmegaCh2) / h^2 )) * (-3) / (1 + z)^4
+Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2) / ((OmegaBh2 + OmegaCh2) / h^2)) * (-3) / (1 + z)^4
 
 q(k) = k / 13.41 / keq
 C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
 T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
 
 function initial_conditions_phi(D_100, D_prime_100, k)
-    A1(k) = - 2 * H_nl(100) + k^2 / 3 / H_nl(100)
-    A2(k) = - k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - H_nl(100)^2
+    A1(k) = -2 * H_nl(100) + k^2 / 3 / H_nl(100)
+    A2(k) = -k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - H_nl(100)^2
     B1() = 0.5 * (H_nl_prime(100) * Omega_tilde_nl(100) + H_nl(100) * Omega_tilde_nl_prime(100))
     B2() = 0.5 * H_nl(100) * Omega_tilde_nl(100)
     C2(k) = k^2 / 3 / H_nl(100) + H_nl(100)
@@ -92,8 +92,8 @@ end
 
 function phi_solve(k)
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
-    M1(z) = 3 * H_nl(z) 
-    M2(z) = H_nl(z)^2 + 2*H_nl_prime(z) 
+    M1(z) = 3 * H_nl(z)
+    M2(z) = H_nl(z)^2 + 2 * H_nl_prime(z)
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
     zspan = (100.0, 0.0)
     function phi_ODE!(du, u, p, t)
@@ -102,14 +102,14 @@ function phi_solve(k)
         du[1] = dphi = phi_dot
     end
     prob = ODEProblem(phi_ODE!, u0, zspan)
-    sol = solve(prob, saveat = save_step_length)
+    sol = solve(prob, saveat=save_step_length)
     return sol
 end
 
 function phi_solve(k, z_target)
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
-    M1(z) = 3 * H_nl(z) 
-    M2(z) = H_nl(z)^2 + 2*H_nl_prime(z) 
+    M1(z) = 3 * H_nl(z)
+    M2(z) = H_nl(z)^2 + 2 * H_nl_prime(z)
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
     zspan = (100.0, z_target)
     function phi_ODE!(du, u, p, t)
@@ -118,13 +118,13 @@ function phi_solve(k, z_target)
         du[1] = dphi = phi_dot
     end
     prob = ODEProblem(phi_ODE!, u0, zspan)
-    sol = solve(prob, saveat = save_step_length)
+    sol = solve(prob, saveat=save_step_length)
     return sol
 end
 
 function plot_phi(k)
     sol = phi_solve(k)
-    plot(sol, layout=(2, 1),title = ["ϕ(z)" "dϕ/dz(z)"], xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
+    plot(sol, layout=(2, 1), title=["ϕ(z)" "dϕ/dz(z)"], xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
 function plot_phi!(k)
@@ -132,7 +132,7 @@ function plot_phi!(k)
     plot!(sol, layout=(2, 1), xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
-function d_solve(k)
+function d_solve_LCDM(k)
     sol = phi_solve(k)
     df = DataFrame(sol)
     z = df[!, 1]
@@ -141,13 +141,13 @@ function d_solve(k)
     d_sol = Float64[]
     num = length(z)
     for i in 1:num
-        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i]) + 0.5 * beta(z[i])) * phi[i])
+        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i])) * phi[i])
         push!(d_sol, d)
     end
     return z, d_sol
 end
 
-function d_solve(k, z_target)
+function d_solve_LCDM(k, z_target)
     sol = phi_solve(k, z_target)
     df = DataFrame(sol)
     z = df[!, 1]
@@ -156,29 +156,29 @@ function d_solve(k, z_target)
     d_sol = Float64[]
     num = length(z)
     for i in 1:num
-        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i]) + 0.5 * beta(z[i])) * phi[i])
+        d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i])) * phi[i])
         push!(d_sol, d)
     end
     return z, d_sol
 end
 
-function plot_d(k)
-    z_arr, d_arr = d_solve(k)
-    plot(z_arr, d_arr, title = "D(z)",xlabel="z", ylabel="D", label="k = $k")
+function plot_d_LCDM(k)
+    z_arr, d_arr = d_solve_LCDM(k)
+    plot(z_arr, d_arr, title="D(z)", xlabel="z", ylabel="D", label="k = $k")
 end
 
-function plot_d!(k)
-    z_arr, d_arr = d_solve(k)
+function plot_d_LCDM!(k)
+    z_arr, d_arr = d_solve_LCDM(k)
     plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k")
 end
 
 function power_spectrum_solve(k_order_min, k_order_max, z)
     data_count = 40
-    k_range = 10 .^ range(k_order_min, stop = k_order_max, length=data_count)
+    k_range = 10 .^ range(k_order_min, stop=k_order_max, length=data_count)
     k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
     ps_arr = Float64[]
     for k in k_range
-        z_arr, d_arr = d_solve(k, z)
+        z_arr, d_arr = d_solve_LCDM(k, z)
         ps = T0(k)^2 * d_arr[end]
         push!(ps_arr, ps)
     end
@@ -188,11 +188,11 @@ end
 
 function power_spectrum_plot(k_order_min, k_order_max, z)
     k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
-    plot(k_arr, ps_arr, title = "Nonlocal Power Spectrum", xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+    plot(k_arr, ps_arr, title="Nonlocal Power Spectrum", xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis=:log, yaxis=:log)
 end
 
 function power_spectrum_plot!(k_order_min, k_order_max, z)
     k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
-    plot!(k_arr, ps_arr, xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+    plot!(k_arr, ps_arr, xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis=:log, yaxis=:log)
 end
 end

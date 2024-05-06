@@ -1,11 +1,13 @@
 module ParamsFunctions
-
+include("./TransferFunction.jl")
+import .TransferFunction as TF
 using DifferentialEquations
 using Plots
 using DataFrames
+using CSV
 #---------------------Config-------------------------
 
-save_step_length = 0.1
+save_step_length = 0.01
 
 #---------------------parameters---------------------
 
@@ -27,18 +29,23 @@ wC_CDM = 0
 wLambda_CDM = -1.03
 deltawLambda_CDM = 0.03
 A_COBE = 2.089 * 10^(-9)
-n_s = 0.9667
+#n_s = 0.9667
+n_s = 0.96
+CMB_temp = 2.726
+Omega_r = 0
 
 #Nonlocal Params
-alpha_s = 0.0034
-#alpha_s = 0
+#alpha_s = 0.0034
+alpha_s = 0.1
 beta_s = -1.0
 H0 = 68.42
 h = 0.6842
 deltaH0 = 0.5
-OmegaBh2 = 0.02217
+#OmegaBh2 = 0.02217
+OmegaBh2 = 0.0226
 deltaOmegeBh2 = 0.0001
-OmegaCh2 = 0.1176
+#OmegaCh2 = 0.1176
+OmegaCh2 = 0.112
 deltaOmegaCh2 = 0.001
 wB = 0
 w = 0 #CDM
@@ -49,8 +56,8 @@ deltawLambda = 0.03
 
 #Other Params
 h = 0.6842
-OmegaB = 0.02217 / h^2
-OmegaC = 0.1176 / h^2
+OmegaB = OmegaBh2 / h^2
+OmegaC = OmegaCh2 / h^2
 Omega0 = 1.0
 thetaCMB = 2.7
 a1 = (46.9 * Omega0 * h^2)^0.670 * (1 + (32.1 * Omega0 * h^2)^(-0.532))
@@ -186,22 +193,22 @@ end
 
 function plot_d(k)
     z_arr, d_arr = d_solve(k)
-    plot(z_arr, d_arr, title = "D(z)",xlabel="z", ylabel="D", label="k = $k")
+    plot(z_arr, d_arr, title = "D(z)",xlabel="z", ylabel="D", label="k = $k - Nonlocal")
 end
 
 function plot_d!(k)
     z_arr, d_arr = d_solve(k)
-    plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k")
+    plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k - Nonlocal")
 end
 
 function power_spectrum_solve(k_order_min, k_order_max, z)
-    data_count = 40
+    data_count = 100
     k_range = 10 .^ range(k_order_min, stop = k_order_max, length=data_count)
     k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
     ps_arr = Float64[]
     for k in k_range
         z_arr, d_arr = d_solve(k, z)
-        ps = T0(k)^2 * d_arr[end]
+        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * d_arr[end] ^ 2 * k ^ n_s
         push!(ps_arr, ps)
     end
     ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
@@ -216,5 +223,32 @@ end
 function power_spectrum_plot!(k_order_min, k_order_max, z)
     k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
     plot!(k_arr, ps_arr, xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+end
+
+function CAMB_PS()
+    df = DataFrame(CSV.File("../../Data/test_matterpower.csv", delim="   "))
+    k_h_CAMB = df[:,:"k/h"]
+    P_CAMB = df[:,:"P"]
+    return k_h_CAMB, P_CAMB
+end
+
+function PS_ratio_plot()
+    df = DataFrame(CSV.File("../../Data/test_matterpower.csv", delim="   "))
+    k_h_CAMB = df[:,:"k/h"]
+    P_CAMB = df[:,:"P"]
+    k_range = k_h_CAMB .* h
+    ps_arr = Float64[]
+    for k in k_range
+        z_arr, d_arr = d_solve(k, 0)
+        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * d_arr[end] ^ 2 * k ^ n_s
+        push!(ps_arr, ps)
+    end
+    ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
+    p_ratio = ps_arr ./ P_CAMB .- 1
+    normalize = ps_arr[250] / P_CAMB[250]
+    ps_arr = ps_arr ./ normalize
+    #plot(k_h_CAMB, p_ratio, title = "Power spectrum ratio with CAMB", xlabel = "k/h", ylabel = "P_nl / P_CAMB - 1", xaxis = :log)
+    plot(k_h_CAMB, P_CAMB, label = "CAMB", xlabel = "k/h", ylabel = "P", xaxis = :log, yaxis = :log)
+    plot!(k_h_CAMB, ps_arr, label = "Nonlocal", xaxis = :log, yaxis = :log )
 end
 end

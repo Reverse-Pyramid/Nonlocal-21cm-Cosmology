@@ -5,7 +5,7 @@ using Plots
 using DataFrames
 #---------------------Config-------------------------
 
-save_step_length = 0.1
+save_step_length = 0.01
 
 #---------------------parameters---------------------
 
@@ -164,12 +164,12 @@ end
 
 function plot_d_LCDM(k)
     z_arr, d_arr = d_solve_LCDM(k)
-    plot(z_arr, d_arr, title="D(z)", xlabel="z", ylabel="D", label="k = $k")
+    plot(z_arr, d_arr, title="D(z)", xlabel="z", ylabel="D", label="k = $k - ΛCDM")
 end
 
 function plot_d_LCDM!(k)
     z_arr, d_arr = d_solve_LCDM(k)
-    plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k")
+    plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k - ΛCDM")
 end
 
 function power_spectrum_solve(k_order_min, k_order_max, z)

@@ -35,11 +35,13 @@ CMB_temp = 2.726
 Omega_r = 0
 
 #Nonlocal Params
-#alpha_s = 0.0034
-alpha_s = 0.1
+alpha_s = 0.0034
+#alpha_s = 0
 beta_s = -1.0
-H0 = 68.42
-h = 0.6842
+#H0 = 68.42
+#h = 0.6842
+H0 = 70
+h = 0.7
 deltaH0 = 0.5
 #OmegaBh2 = 0.02217
 OmegaBh2 = 0.0226
@@ -55,7 +57,6 @@ dP_dRho = 0
 deltawLambda = 0.03
 
 #Other Params
-h = 0.6842
 OmegaB = OmegaBh2 / h^2
 OmegaC = OmegaCh2 / h^2
 Omega0 = 1.0
@@ -233,22 +234,39 @@ function CAMB_PS()
 end
 
 function PS_ratio_plot()
-    df = DataFrame(CSV.File("../../Data/test_matterpower.csv", delim="   "))
+    df = DataFrame(CSV.File("../../Data/LCDM_matterpower.csv", delim="   "))
     k_h_CAMB = df[:,:"k/h"]
     P_CAMB = df[:,:"P"]
     k_range = k_h_CAMB .* h
     ps_arr = Float64[]
     for k in k_range
         z_arr, d_arr = d_solve(k, 0)
-        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * d_arr[end] ^ 2 * k ^ n_s
+        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * k ^ n_s * d_arr[end] ^ 2 
         push!(ps_arr, ps)
     end
-    ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
+    ps_arr = ps_arr .* (8 * pi^2 / 25 * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
     p_ratio = ps_arr ./ P_CAMB .- 1
     normalize = ps_arr[250] / P_CAMB[250]
     ps_arr = ps_arr ./ normalize
     #plot(k_h_CAMB, p_ratio, title = "Power spectrum ratio with CAMB", xlabel = "k/h", ylabel = "P_nl / P_CAMB - 1", xaxis = :log)
     plot(k_h_CAMB, P_CAMB, label = "CAMB", xlabel = "k/h", ylabel = "P", xaxis = :log, yaxis = :log)
     plot!(k_h_CAMB, ps_arr, label = "Nonlocal", xaxis = :log, yaxis = :log )
+end
+function PS_ratio_ratio_plot()
+    df = DataFrame(CSV.File("../../Data/LCDM_matterpower.csv", delim="   "))
+    k_h_CAMB = df[:,:"k/h"]
+    P_CAMB = df[:,:"P"]
+    k_range = k_h_CAMB .* h
+    ps_arr = Float64[]
+    for k in k_range
+        z_arr, d_arr = d_solve(k, 0)
+        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * k ^ n_s * d_arr[end] ^ 2 
+        push!(ps_arr, ps)
+    end
+    ps_arr = ps_arr .* (8 * pi^2 / 25 * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
+    normalize = ps_arr[250] / P_CAMB[250]
+    ps_arr = ps_arr ./ normalize
+    p_ratio = ps_arr ./ P_CAMB .- 1
+    plot(k_h_CAMB, p_ratio, title = "Power spectrum ratio with CAMB", xlabel = "k/h", ylabel = "P_nl / P_CAMB - 1", xaxis = :log)
 end
 end

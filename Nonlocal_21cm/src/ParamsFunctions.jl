@@ -2,6 +2,7 @@ module ParamsFunctions
 include("./TransferFunction.jl")
 import .TransferFunction as TF
 using DifferentialEquations
+using Integrals
 using Plots
 using DataFrames
 using CSV
@@ -13,6 +14,7 @@ save_step_length = 0.01
 
 #General Params
 G = 6.67 * 10^(-11)
+c_kms = 3 * 10 ^ 5
 Omega_m = 0.317
 Omega_l = 1 - Omega_m
 
@@ -107,6 +109,7 @@ Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 
 q(k) = k / 13.41 / keq
 C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
 T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
+W2(x) = (3 * (sin(x) - x * cos(x)) / x^3)^2
 
 function initial_conditions_phi(D_100, D_prime_100, k)
     A1(k) = 2 * H_nl(100) + 0.5 * beta(100) + 2 * Sprime(100) / (1 + S(100)) - k^2 / 3 / H_nl(100)
@@ -203,7 +206,7 @@ function plot_d!(k)
 end
 
 function power_spectrum_solve(k_order_min, k_order_max, z)
-    data_count = 100
+    data_count = 1000
     k_range = 10 .^ range(k_order_min, stop = k_order_max, length=data_count)
     k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
     ps_arr = Float64[]
@@ -224,6 +227,12 @@ end
 function power_spectrum_plot!(k_order_min, k_order_max, z)
     k_arr, ps_arr = power_spectrum_solve(k_order_min, k_order_max, z)
     plot!(k_arr, ps_arr, xlabel="k (1/Mpc)", ylabel="P(k)", label="z = $z", xaxis = :log, yaxis = :log)
+end
+
+function save_power_spectrum(title, k_order_min, k_order_max, z)
+    K, Ps = power_spectrum_solve(k_order_min, k_order_max, z)
+    d =DataFrame(k_over_h = K, P = Ps)
+    CSV.write(title, d)
 end
 
 function CAMB_PS()
@@ -252,6 +261,7 @@ function PS_ratio_plot()
     plot(k_h_CAMB, P_CAMB, label = "CAMB", xlabel = "k/h", ylabel = "P", xaxis = :log, yaxis = :log)
     plot!(k_h_CAMB, ps_arr, label = "Nonlocal", xaxis = :log, yaxis = :log )
 end
+
 function PS_ratio_ratio_plot()
     df = DataFrame(CSV.File("../../Data/LCDM_matterpower.csv", delim="   "))
     k_h_CAMB = df[:,:"k/h"]
@@ -269,4 +279,72 @@ function PS_ratio_ratio_plot()
     p_ratio = ps_arr ./ P_CAMB .- 1
     plot(k_h_CAMB, p_ratio, title = "Power spectrum ratio with CAMB", xlabel = "k/h", ylabel = "P_nl / P_CAMB - 1", xaxis = :log)
 end
+
+function PS_integrate(title, R)
+    df = DataFrame(CSV.File(title, delim=","))
+    k_h_0 = df[:,:"k_over_h"]
+    k_h_0 = k_h_0 .* h
+    P_0 = df[:,:"P"]
+    #index = findfirst(x -> x>=0.01, k_h_0)
+    index = 1
+    k_h = k_h_0[index:end]
+    P = P_0[index:end]
+    integrable = (1/(2 * pi^2)) .* (k_h .^ 2) .* (P) .* W2.(k_h .* (R * h))
+    prob = SampledIntegralProblem(integrable, k_h)
+    method = TrapezoidalRule()
+    sigma = solve(prob, method)
+    return sigma.u
+end
+
+function PS_integrate_CDM(title, R)
+    df = DataFrame(CSV.File(title, delim="   "))
+    k_h_0 = df[:,:"k/h"]
+    k_h_0 = k_h_0 .* h
+    P_0 = df[:,:"P"]
+    #index = findfirst(x -> x>=0.01, k_h_0)
+    index = 1
+    k_h = k_h_0[index:end]
+    P = P_0[index:end]
+    integrable = (1/(2 * pi^2)) .* (k_h .^ 2) .* (P) .* W2.(k_h .* (R * h))
+    prob = SampledIntegralProblem(integrable, k_h)
+    method = TrapezoidalRule()
+    sigma = solve(prob, method)
+    return sigma.u
+end
+
+function PS_integrate_plot(title)
+    data_count = 100
+    R_range = 10 .^ range(-1, stop = 3, length=data_count)
+    sigmaR = sqrt.(PS_integrate.(title, R_range)) #./ PS_integrate(title, 8)) .* 0.8
+    plot(R_range, sigmaR, xaxis = :log, yaxis = :log, title = "σ8 vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
+end
+
+function PS_integrate_plot_CDM(title)
+    data_count = 100
+    R_range = 10 .^ range(-1, stop = 3, length=data_count)
+    sigmaR = sqrt.(PS_integrate_CDM.(title, R_range)) #./ PS_integrate(title, 8)) .* 0.8
+    plot(R_range, sigmaR, xaxis = :log, title = "σ8 vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
+end
+
+function PS_fix_sigma8(title)
+    df = DataFrame(CSV.File(title, delim=","))
+    k_h = df[:,:"k_over_h"]
+    P_0 = df[:,:"P"]
+    sigma_8_ratio = (0.8^2 / PS_integrate(title, 8))
+    Ps = P_0 .* sigma_8_ratio
+    d =DataFrame(k_over_h = k_h, P = Ps)
+    CSV.write("../../Data/Nonlocal_powerspectrum_sigma8.csv", d)
+end
+
+function PS_fixed_sigma8_plot(title)
+    df = DataFrame(CSV.File(title, delim=","))
+    k_h = df[:,:"k_over_h"]
+    P = df[:,:"P"]
+    df = DataFrame(CSV.File("../../Data/LCDM_matterpower.csv", delim="   "))
+    k_h_CDM = df[:,:"k/h"]
+    P_CDM = df[:,:"P"]
+    plot(k_h, P, title = "Nonlocal Power Spectrum Corrected \n with σ8", xlabel = "k/h", ylabel = "P", label = "Nonlocal fixed", xaxis = :log, yaxis = :log)
+    plot!(k_h_CDM, P_CDM)
+end
+
 end

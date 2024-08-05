@@ -35,6 +35,7 @@ A_COBE = 2.089 * 10^(-9)
 n_s = 0.96
 CMB_temp = 2.726
 Omega_r = 0
+delta_c = 1.68
 
 #Nonlocal Params
 alpha_s = 0.0034
@@ -366,5 +367,24 @@ function save_power_spectrum_linear(title, k_order_min, k_order_max, z)
     K, Ps = power_spectrum_solve_linear(k_order_min, k_order_max, z)
     d =DataFrame(k_over_h = K, P = Ps)
     CSV.write(title, d)
+end
+
+function bias_halo_matter(R, k, z, title)
+    #z_arr, d0 = d_solve(k)
+    #z_arr, dz = d_solve(k,z)
+    #nu = delta_c * d0[end] / dz[end] / PS_integrate(title, R)
+    nu = delta_c / PS_integrate(title, R)
+    return (1 + (nu^2 - 1) / delta_c)
+end
+
+function PS_bias_applied_compare(title, z, R)
+    df = DataFrame(CSV.File(title, delim=","))
+    k_h = df[:,:"k_over_h"]
+    k = k_h .* h
+    P = df[:,:"P"]
+    bias = bias_halo_matter.(R, k, z, title)
+    P_biased = P .* bias
+    plot(k_h, P_biased, title = "Biased and Unbiased powerspectrums", xlabel = "k/h", ylabel = "P", label = "biased", xaxis = :log, yaxis = :log)
+    plot!(k_h, P, label = "Unbiased")
 end
 end

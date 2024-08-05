@@ -208,7 +208,7 @@ end
 function power_spectrum_solve(k_order_min, k_order_max, z)
     data_count = 1000
     k_range = 10 .^ range(k_order_min, stop = k_order_max, length=data_count)
-    k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
+    k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5)
     ps_arr = Float64[]
     for k in k_range
         z_arr, d_arr = d_solve(k, z)
@@ -216,7 +216,7 @@ function power_spectrum_solve(k_order_min, k_order_max, z)
         push!(ps_arr, ps)
     end
     ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
-    return k_range, ps_arr
+    return k_range ./ h, ps_arr
 end
 
 function power_spectrum_plot(k_order_min, k_order_max, z)
@@ -285,7 +285,7 @@ function PS_integrate(title, R)
     k_h_0 = df[:,:"k_over_h"]
     k_h_0 = k_h_0 .* h
     P_0 = df[:,:"P"]
-    #index = findfirst(x -> x>=0.01, k_h_0)
+    #index = findfirst(x -> x>=1, k_h_0)
     index = 1
     k_h = k_h_0[index:end]
     P = P_0[index:end]
@@ -323,14 +323,14 @@ function PS_integrate_plot_CDM(title)
     data_count = 100
     R_range = 10 .^ range(-1, stop = 3, length=data_count)
     sigmaR = sqrt.(PS_integrate_CDM.(title, R_range)) #./ PS_integrate(title, 8)) .* 0.8
-    plot(R_range, sigmaR, xaxis = :log, title = "σ8 vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
+    plot(R_range, sigmaR, xaxis = :log, yaxis = :log, title = "σ8 vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
 end
 
 function PS_fix_sigma8(title)
     df = DataFrame(CSV.File(title, delim=","))
     k_h = df[:,:"k_over_h"]
     P_0 = df[:,:"P"]
-    sigma_8_ratio = (0.8^2 / PS_integrate(title, 8))
+    sigma_8_ratio = (0.8^2 / PS_integrate("../../Data/Nonlocal_Linear_Powerspectrum.csv", 8))
     Ps = P_0 .* sigma_8_ratio
     d =DataFrame(k_over_h = k_h, P = Ps)
     CSV.write("../../Data/Nonlocal_powerspectrum_sigma8.csv", d)
@@ -344,7 +344,27 @@ function PS_fixed_sigma8_plot(title)
     k_h_CDM = df[:,:"k/h"]
     P_CDM = df[:,:"P"]
     plot(k_h, P, title = "Nonlocal Power Spectrum Corrected \n with σ8", xlabel = "k/h", ylabel = "P", label = "Nonlocal fixed", xaxis = :log, yaxis = :log)
-    plot!(k_h_CDM, P_CDM)
+    plot!(k_h_CDM, P_CDM, label = "LCDM")
 end
 
+function power_spectrum_solve_linear(k_order_min, k_order_max, z)
+    data_count = 1000
+    k_range = range(10.0^k_order_min, stop = 10.0^k_order_max, length=data_count)
+    k_range = k_range .* H_nonlocal(0) ./ (3 * 10^5) ./ h
+    ps_arr = Float64[]
+    for k in k_range
+        k *= h
+        z_arr, d_arr = d_solve(k, z)
+        ps = TF.Tk_EH_full(k, Omega_r , OmegaC, OmegaB, Omega_l, h, CMB_temp)^2 * d_arr[end] ^ 2 * k ^ n_s
+        push!(ps_arr, ps)
+    end
+    ps_arr = ps_arr .* (4 * pi * (3 * 10^5 / H_nonlocal(0))^4 / Omega_m^2 * A_COBE)
+    return k_range, ps_arr
+end
+
+function save_power_spectrum_linear(title, k_order_min, k_order_max, z)
+    K, Ps = power_spectrum_solve_linear(k_order_min, k_order_max, z)
+    d =DataFrame(k_over_h = K, P = Ps)
+    CSV.write(title, d)
+end
 end

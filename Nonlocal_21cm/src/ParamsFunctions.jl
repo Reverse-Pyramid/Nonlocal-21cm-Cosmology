@@ -377,7 +377,9 @@ function bias_halo_matter(R, k, z, title)
     return (1 + (nu^2 - 1) / delta_c)
 end
 
-function PS_bias_applied_compare(title, z, R)
+function PS_bias_applied_compare(title, z, M::Float64)
+    rho = 3 * (1 + S(0)) * (H_nonlocal(0)/ 3.08 / 10.0^19) ^ 2 / (8 * pi * G) * ( 3.08 * 10.0 ^ 22) ^ 3 / (1.99 * 10.0 ^ 30)
+    R = ((3 * M / (4 * pi * rho)) ^ (1/3)) #parsec to meter conversion
     df = DataFrame(CSV.File(title, delim=","))
     k_h = df[:,:"k_over_h"]
     k = k_h .* h

@@ -6,11 +6,22 @@ using Integrals
 using Plots
 using DataFrames
 using CSV
+
+#--------------------References----------------------
+
+# Ref_1: "Planck 2018 results" https://doi.org/10.48550/arXiv.1807.06209
+# Ref_2: "LLNL gravity: Cosmological Perturbations" https://doi.org/10.48550/arXiv.2311.07749
+
 #---------------------Config-------------------------
 
+# This value is mainly used as the step length for solving ODEs (ODE Solving is used 
+# when calculating phi)
 save_step_length = 0.01
 
 #---------------------parameters---------------------
+
+# LCDM parameters used are from Ref_1
+# Nonlocal parameters used initially are from Ref_2
 
 #General Params
 G = 6.67 * 10^(-11)
@@ -64,6 +75,9 @@ OmegaB = OmegaBh2 / h^2
 OmegaC = OmegaCh2 / h^2
 Omega0 = 1.0
 thetaCMB = 2.7
+
+```
+# Used for calculating a simple transfer function which is no longer used (Replaced by the TransferFunction.jl file)
 a1 = (46.9 * Omega0 * h^2)^0.670 * (1 + (32.1 * Omega0 * h^2)^(-0.532))
 a2 = (12.0 * Omega0 * h^2)^0.424 * (1 + (45.0 * Omega0 * h^2)^(-0.582))
 alpha_c = a1^(-OmegaB / Omega0) * a2^(-(OmegaB / Omega0)^3)
@@ -71,7 +85,7 @@ b1 = 0.944 / (1 + (458 * Omega0 * h^2)^(-0.708))
 b2 = (0.395 * Omega0 * h^2)^(-0.0266)
 beta_c = 1 / (1 + (b1 * (OmegaC / Omega0)^b2 - 1))
 keq = 7.46 * 10^(-2) * Omega0 * h^2 * thetaCMB^(-2)
-
+```
 #---------------------functions---------------------
 
 #Nonlocal theory functions
@@ -107,11 +121,19 @@ Omega_tilde_nl(z) = (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z)^(3 * (1 + wB)) + Omeg
 
 Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) / ((OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0)))) * (-3) / (1 + z)^4
 
+```
+# Simplified transfer function that is no longer used (Replaced by the TransferFunction.jl file)
 q(k) = k / 13.41 / keq
 C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
 T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
+```
+#Window function used for integration when calculating the power spectrum
 W2(x) = (3 * (sin(x) - x * cos(x)) / x^3)^2
 
+#--------------------Phi Calculation-------------------
+# Phi is the FT of gravitational potential as described in Ref_2 eq(90-92)
+
+# Function that finds initial conditions of phi, and phi' at z=100 using values of D(Density Contrast) and D' at z=100
 function initial_conditions_phi(D_100, D_prime_100, k)
     A1(k) = 2 * H_nl(100) + 0.5 * beta(100) + 2 * Sprime(100) / (1 + S(100)) - k^2 / 3 / H_nl(100)
     A2(k) = -2 * beta(100)^2 + 2 * Ssecond(100) / (1 + S(100)) - 2 * Sprime(100) / (1 + S(100)) * H_nl_prime(100) / H_nl(100) + k^2 * H_nl_prime(100) / 3 / H_nl(100)^2 - H_nl_prime(100) - 0.5 * betaprime(100) + 3 * (1 - Omega_tilde_nl(100)) * H_nl(100) * (H_nl(100) + beta(100))
@@ -124,12 +146,16 @@ function initial_conditions_phi(D_100, D_prime_100, k)
     return phi_100, phi_prime_100
 end
 
+# Function that solves for phi at a given scale k by solving the ODE of eq(92) from Ref_2
 function phi_solve(k)
+    # Calculating initial conditions and defining the functions
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
     M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
     M2(z) = 3 * (1 - Omega_tilde_nl(z)) * H_nl(z) * (H_nl(z) + beta(z)) - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
+    # Solving the ODE from z = 100 to z = 0
     zspan = (100.0, 0.0)
+    # Defining the ODE problem and solving it using the DifferentialEquations.jl package
     function phi_ODE!(du, u, p, t)
         phi, phi_dot = u
         du[2] = dphi_doubledot = -(H_nonlocal_prime_z(t) - M1(t)) / H_nonlocal(t) * phi_dot - M2(t) / H_nonlocal(t)^2 * phi
@@ -140,11 +166,13 @@ function phi_solve(k)
     return sol
 end
 
+# Solves for phi like the previous function but the final calculated redshift is z_target
 function phi_solve(k, z_target)
     phi_100, phi_prime_100 = initial_conditions_phi(1 / 101, -1 / (101)^2 * (-H_nonlocal(100)), k)
     M1(z) = 3 * H_nl(z) + beta(z) + 2 * Sprime(z) / (1 + S(z))
     M2(z) = 3 * (1 - Omega_tilde_nl(z)) * H_nl(z) * (H_nl(z) + beta(z)) - 2 * beta(z)^2 + 2 * Ssecond(z) / (1 + S(z)) - 2 * Sprime(z) / (1 + S(z)) * H_nl_prime(z) / H_nl(z)
     u0 = [phi_100, -phi_prime_100 / H_nonlocal(100)]
+    # Solving the ODE from z = 100 to z = z_target
     zspan = (100.0, z_target)
     function phi_ODE!(du, u, p, t)
         phi, phi_dot = u
@@ -156,17 +184,23 @@ function phi_solve(k, z_target)
     return sol
 end
 
+# Plots phi for z range (0,100) for a given k
 function plot_phi(k)
     sol = phi_solve(k)
     plot(sol, layout=(2, 1),title = ["ϕ(z)" "dϕ/dz(z)"], xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
+# Same as the previous funtion but adds a plot on top
 function plot_phi!(k)
     sol = phi_solve(k)
     plot!(sol, layout=(2, 1), xlabel="z", label=["ϕ, k = $k" "dϕ/dz, k = $k"])
 end
 
+#-------------------------Density Contrast Calculation---------------------------
+
+# Solves for d (density contrast) using eq(90,91) from Ref_2
 function d_solve(k)
+    #Solving for phi
     sol = phi_solve(k)
     df = DataFrame(sol)
     z = df[!, 1]
@@ -174,6 +208,7 @@ function d_solve(k)
     phi_dot = df[!, 3]
     d_sol = Float64[]
     num = length(z)
+    # Calculating d for values of z in (100:0)
     for i in 1:num
         d = 2 / (H_nl(z[i]) * Omega_tilde_nl(z[i])) * (-H_nonlocal(z[i]) * phi_dot[i] + (k^2 / 3 / H_nl(z[i]) + H_nl(z[i]) + 0.5 * beta(z[i])) * phi[i])
         push!(d_sol, d)
@@ -181,6 +216,7 @@ function d_solve(k)
     return z, d_sol
 end
 
+# Same as the previous function but solves d in range (100:z_target)
 function d_solve(k, z_target)
     sol = phi_solve(k, z_target)
     df = DataFrame(sol)
@@ -196,15 +232,19 @@ function d_solve(k, z_target)
     return z, d_sol
 end
 
+# Plots d for a specified k and over z
 function plot_d(k)
     z_arr, d_arr = d_solve(k)
     plot(z_arr, d_arr, title = "D(z)",xlabel="z", ylabel="D", label="k = $k - Nonlocal")
 end
 
+# adds plot d for a specified k and over z
 function plot_d!(k)
     z_arr, d_arr = d_solve(k)
     plot!(z_arr, d_arr, xlabel="z", ylabel="D", label="k = $k - Nonlocal")
 end
+
+#-------------------------Power Spectrum Calculation---------------------------
 
 function power_spectrum_solve(k_order_min, k_order_max, z)
     data_count = 1000

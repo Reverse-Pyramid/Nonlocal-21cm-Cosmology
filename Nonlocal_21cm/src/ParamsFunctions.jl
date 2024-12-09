@@ -76,16 +76,16 @@ OmegaC = OmegaCh2 / h^2
 Omega0 = 1.0
 thetaCMB = 2.7
 
-```
-# Used for calculating a simple transfer function which is no longer used (Replaced by the TransferFunction.jl file)
-a1 = (46.9 * Omega0 * h^2)^0.670 * (1 + (32.1 * Omega0 * h^2)^(-0.532))
-a2 = (12.0 * Omega0 * h^2)^0.424 * (1 + (45.0 * Omega0 * h^2)^(-0.582))
-alpha_c = a1^(-OmegaB / Omega0) * a2^(-(OmegaB / Omega0)^3)
-b1 = 0.944 / (1 + (458 * Omega0 * h^2)^(-0.708))
-b2 = (0.395 * Omega0 * h^2)^(-0.0266)
-beta_c = 1 / (1 + (b1 * (OmegaC / Omega0)^b2 - 1))
-keq = 7.46 * 10^(-2) * Omega0 * h^2 * thetaCMB^(-2)
-```
+
+# # Used for calculating a simple transfer function which is no longer used (Replaced by the TransferFunction.jl file)
+# a1 = (46.9 * Omega0 * h^2)^0.670 * (1 + (32.1 * Omega0 * h^2)^(-0.532))
+# a2 = (12.0 * Omega0 * h^2)^0.424 * (1 + (45.0 * Omega0 * h^2)^(-0.582))
+# alpha_c = a1^(-OmegaB / Omega0) * a2^(-(OmegaB / Omega0)^3)
+# b1 = 0.944 / (1 + (458 * Omega0 * h^2)^(-0.708))
+# b2 = (0.395 * Omega0 * h^2)^(-0.0266)
+# beta_c = 1 / (1 + (b1 * (OmegaC / Omega0)^b2 - 1))
+# keq = 7.46 * 10^(-2) * Omega0 * h^2 * thetaCMB^(-2)
+
 #---------------------functions---------------------
 
 #Nonlocal theory functions
@@ -121,12 +121,12 @@ Omega_tilde_nl(z) = (OmegaBh2 / h^2 / (1 + S(0)) * (1 + z)^(3 * (1 + wB)) + Omeg
 
 Omega_tilde_nl_prime(z) = H_nonlocal(z) * (Omega_tilde_nl(z)^2 * (1 - (OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0))) / ((OmegaBh2 + OmegaCh2) / h^2 / (1 + S(0)))) * (-3) / (1 + z)^4
 
-```
-# Simplified transfer function that is no longer used (Replaced by the TransferFunction.jl file)
-q(k) = k / 13.41 / keq
-C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
-T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
-```
+# ```
+# # Simplified transfer function that is no longer used (Replaced by the TransferFunction.jl file)
+# q(k) = k / 13.41 / keq
+# C(k) = 14.2 / alpha_c + 386.0 / (1 + 69.9 * q(k)^1.08)
+# T0(k) = log(exp(1.0) + 1.8 * beta_c * q(k)) / (log(exp(1.0) + 1.8 * beta_c * q(k)) + C(k) * q(k)^2.0) #Basic Transfer function
+# ```
 #Window function used for integration when calculating the power spectrum
 W2(x) = (3 * (sin(x) - x * cos(x)) / x^3)^2
 
@@ -357,7 +357,7 @@ function PS_integrate_plot(title)
     data_count = 100
     R_range = 10 .^ range(-1, stop = 3, length=data_count)
     sigmaR = sqrt.(PS_integrate.(title, R_range)) #./ PS_integrate(title, 8)) .* 0.8
-    plot(R_range, sigmaR, xaxis = :log, yaxis = :log, title = "σ8 vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
+    plot(R_range, sigmaR, xaxis = :log, yaxis = :log, title = "σ vs R", xlabel = "R(Mpc/h)", ylabel = "σ(R)", legend = false)
 end
 
 function PS_integrate_plot_CDM(title)
@@ -425,8 +425,8 @@ function PS_bias_applied_compare(title, z, M::Float64)
     k = k_h .* h
     P = df[:,:"P"]
     bias = bias_halo_matter.(R, k, z, title)
-    P_biased = P .* bias
-    plot(k_h, P_biased, title = "Biased and Unbiased powerspectrums", xlabel = "k/h", ylabel = "P", label = "biased", xaxis = :log, yaxis = :log)
+    P_biased = P .* bias .^ 2
+    plot(k_h, P_biased, title = "Biased and Unbiased powerspectrums", xlabel = "k/h", ylabel = "P", label = "biased", xaxis = :log, yaxis = :log, ticks = 6)
     plot!(k_h, P, label = "Unbiased")
 end
 end

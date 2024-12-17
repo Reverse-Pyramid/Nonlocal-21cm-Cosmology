@@ -73,7 +73,7 @@ Using the growth function and EH transfer function we calculated, we can obtain 
 using the equation below:
 <br>
 
-LLNL power spectrum: $PS = A \; {T_{EH}}(k) ^ 2 \; D(k,z) ^ 2$
+LLNL power spectrum: $PS = A {T_{EH}}(k) ^ 2 D(k,z) ^ 2$
 <br>
 
 ![alt text](presentation/64d8e75d75c70d6001ca5469fc9f0c882c3f83bb.png)
@@ -139,7 +139,7 @@ Radius $R = \left(  \frac{3 M}{4 \pi \rho}  \right) ^ {(\frac{1}{3})}$
 The biased power spectrum is calculated as below:
 <br>
 
-Halo Power Spectrum: $P_{Halo} = b^2 \; P_M$
+Halo Power Spectrum: $P_{Halo} = b^2 P_M$
 
 <br>
 

@@ -150,9 +150,7 @@ $
 The biased power spectrum is calculated as below:
 <br>
 
-$
-P_{Halo} = b^2 \; P_M
-$
+Halo Power Spectrum: $P_{Halo} = b^2 \; P_M$
 
 <br>
 

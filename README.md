@@ -34,14 +34,12 @@ $\alpha = 0.0034$, $\beta = -1$ and $S(z) = \alpha (1 + z)^\beta$
 ### Field Equations
 ---
 
-$
- \phi' + (\frac{k^2}{3\mathcal{H}}+\mathcal{H}+\frac{1}{2}\mathcal{B})\phi = \frac{\kappa a^2}{6(1+\bar{S})\mathcal{H}}\delta\rho = \frac{\mathcal{H} \rho_m}{2 \rho} \delta 
-$
+1. $\phi' + (\frac{k^2}{3\mathcal{H}}+\mathcal{H}+\frac{1}{2}\mathcal{B})\phi = \frac{\kappa a^2}{6(1+\bar{S})\mathcal{H}}\delta\rho = \frac{\mathcal{H} \rho_m}{2 \rho} \delta$
 <br>
-$
- \phi'' + (3\mathcal{H}+\mathcal{B})\phi' - (3w\mathcal{H}^2 + 3w\mathcal{H}\mathcal{B} +2\mathcal{B}^2)\phi + 2\mathcal{H}\frac{\delta S'}{1+\bar{S}} =0
-$
+
+2. $\phi'' + (3\mathcal{H}+\mathcal{B})\phi' - (3w\mathcal{H}^2 + 3w\mathcal{H}\mathcal{B} +2\mathcal{B}^2)\phi + 2\mathcal{H}\frac{\delta S'}{1+\bar{S}} =0$
 <br>
+
 The second equation is solved by DifferentialEquations.jl ODE solver in reverse from $z=100$ to $z=0$ (or any other z). <br>
 Since non-local effects are miniscule at $z=100$ the initial conditions of $\phi$ are calculated using $D$ and $D'$ (density contrast for $\Lambda \text{CDM}$) at $z=100$.<br>
 Different values of $k$ can also be given to the function.
@@ -74,9 +72,8 @@ This module is a direct port of a c++ module by Farbod Hassani.
 Using the growth function and EH transfer function we calculated, we can obtain the non-local power spectrum
 using the equation below:
 <br>
-$
-LLNL \quad PS = A \; {T_{EH}}(k) ^ 2 \; D(k,z) ^ 2 
-$
+
+LLNL power spectrum: $PS = A \; {T_{EH}}(k) ^ 2 \; D(k,z) ^ 2$
 <br>
 
 ![alt text](presentation/64d8e75d75c70d6001ca5469fc9f0c882c3f83bb.png)
@@ -96,18 +93,16 @@ to illustrate the non-local effects.
 ---
 First $\sigma_8$ is calculated with regards to $R$ using the formula below: (at z=0)
 <br>
-$
-\sigma^2(R) = \int \frac{1}{2 \pi ^2} (\frac{k}{h})^2 P(k) W^2(k \cdot R) dk
-$
+
+sigma: $\sigma^2(R) = \int \frac{1}{2 \pi ^2} (\frac{k}{h})^2 P(k) W^2(k \cdot R) dk$
+
 <br>
 
 where $W(x)$ is a window function defined as:
 
 <br>
 
-$
-W(x) = 3 \frac{\sin(x) - x \cos(x)}{x^3}
-$
+window function: $W(x) = 3 \frac{\sin(x) - x \cos(x)}{x^3}$
 
 <br>
 
@@ -130,20 +125,14 @@ same manner. The scaled power spectrum will have the correct order of magnitude.
 As was discussed in a previous research group meeting, the Press-Schechter bias is defined as:
 <br>
 
-$
-b = 1 + \frac{\nu^2 - 1}{\delta_c}
-$
+1. $b = 1 + \frac{\nu^2 - 1}{\delta_c}$
 
-$
-\nu = \frac{\delta_c}{\sigma(R)}
-$
+2. $\nu = \frac{\delta_c}{\sigma(R)}$
 
 $R$ can be calculated by knowing tracer mass and density.
 <br>
 
-$
-R = \left(  \frac{3 M}{4 \pi \rho}  \right) ^ {(\frac{1}{3})}
-$
+Radius $R = \left(  \frac{3 M}{4 \pi \rho}  \right) ^ {(\frac{1}{3})}$
 
 <br>
 
